@@ -63,6 +63,8 @@
     enemyShoot: () => beep({ freq: 260, duration: 0.08, type: 'sawtooth', volume: 0.03, slide: -80 }),
     explosion: () => beep({ freq: 140, duration: 0.25, type: 'triangle', volume: 0.08, slide: -100 }),
     hit: () => beep({ freq: 90, duration: 0.3, type: 'sawtooth', volume: 0.09, slide: -60 }),
+    pickup: () => beep({ freq: 500, duration: 0.14, type: 'sine', volume: 0.06, slide: 340 }),
+    pickupNone: () => beep({ freq: 220, duration: 0.16, type: 'sine', volume: 0.03, slide: -50 }),
   };
 
   // ---------- Utility ----------
@@ -144,10 +146,11 @@
 
   // ---------- Entities ----------
   class Bullet {
-    constructor(x, y, vx, w = 10, h = 3, color = '#7fe3ff') {
+    constructor(x, y, vx, vy = 0, w = 10, h = 3, color = '#7fe3ff') {
       this.x = x;
       this.y = y;
       this.vx = vx;
+      this.vy = vy;
       this.w = w;
       this.h = h;
       this.color = color;
@@ -155,14 +158,18 @@
     }
     update(dt) {
       this.x += this.vx * dt;
-      if (this.x < -20 || this.x > W + 20) this.dead = true;
+      this.y += this.vy * dt;
+      if (this.x < -20 || this.x > W + 20 || this.y < -20 || this.y > H + 20) this.dead = true;
     }
     draw() {
+      ctx.save();
+      ctx.translate(this.x + this.w / 2, this.y + this.h / 2);
+      ctx.rotate(Math.atan2(this.vy, this.vx));
       ctx.fillStyle = this.color;
       ctx.shadowColor = this.color;
       ctx.shadowBlur = 6;
-      ctx.fillRect(this.x, this.y, this.w, this.h);
-      ctx.shadowBlur = 0;
+      ctx.fillRect(-this.w / 2, -this.h / 2, this.w, this.h);
+      ctx.restore();
     }
   }
 
@@ -177,6 +184,8 @@
       this.fireRate = 0.18;
       this.invuln = 0;
       this.thrust = 0;
+      this.speedBoosts = 0;
+      this.diagonalUnlocked = false;
     }
     get hitbox() {
       return { x: this.x + 6, y: this.y + 5, w: this.w - 16, h: this.h - 10 };
@@ -206,7 +215,11 @@
     }
     shoot() {
       const y = this.y + this.h / 2 - 1.5;
-      bullets.push(new Bullet(this.x + this.w, y, 640));
+      bullets.push(new Bullet(this.x + this.w, y, 640, 0));
+      if (this.diagonalUnlocked) {
+        bullets.push(new Bullet(this.x + this.w * 0.7, this.y + 2, 560, -340, 8, 3, '#5cc9ff'));
+        bullets.push(new Bullet(this.x + this.w * 0.7, this.y + this.h - 5, 560, 340, 8, 3, '#5cc9ff'));
+      }
       sfx.shoot();
     }
     hit() {
@@ -220,13 +233,31 @@
       const y = this.y;
       // engine flame
       const flameLen = 10 + Math.sin(performance.now() / 40) * 4 + (this.thrust ? 6 : 0);
-      ctx.fillStyle = '#ff9d3c';
+      const flameColor = this.speedBoosts >= 2 ? '#7fffcf' : this.speedBoosts === 1 ? '#ffe37f' : '#ff9d3c';
+      ctx.fillStyle = flameColor;
       ctx.beginPath();
       ctx.moveTo(x, y + this.h * 0.3);
       ctx.lineTo(x - flameLen, y + this.h / 2);
       ctx.lineTo(x, y + this.h * 0.7);
       ctx.closePath();
       ctx.fill();
+
+      // diagonal wingtip cannons
+      if (this.diagonalUnlocked) {
+        ctx.fillStyle = '#5cc9ff';
+        ctx.beginPath();
+        ctx.moveTo(x + this.w * 0.45, y);
+        ctx.lineTo(x + this.w * 0.75, y - 7);
+        ctx.lineTo(x + this.w * 0.55, y - 1);
+        ctx.closePath();
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(x + this.w * 0.45, y + this.h);
+        ctx.lineTo(x + this.w * 0.75, y + this.h + 7);
+        ctx.lineTo(x + this.w * 0.55, y + this.h + 1);
+        ctx.closePath();
+        ctx.fill();
+      }
 
       // hull
       ctx.fillStyle = '#8fe8ff';
@@ -281,7 +312,7 @@
       if (this.shootTimer <= 0 && this.x < W - 40 && this.x > 40) {
         this.shootTimer = rand(1.2, 2.4);
         if (Math.random() < this.def.shootChance) {
-          enemyBullets.push(new Bullet(this.x, this.y + this.h / 2 - 1.5, -360, 10, 3, '#ff5d7a'));
+          enemyBullets.push(new Bullet(this.x, this.y + this.h / 2 - 1.5, -360, 0, 10, 3, '#ff5d7a'));
           sfx.enemyShoot();
         }
       }
@@ -310,13 +341,120 @@
     }
   }
 
+  const SPEED_BOOST_AMOUNT = 90;
+  const MAX_SPEED_BOOSTS = 2;
+  const POWERUP_DEFS = {
+    speed: { color: '#5cff9d' },
+    life: { color: '#ff5c8a' },
+    diagonal: { color: '#5cc9ff' },
+  };
+
+  class PowerUp {
+    constructor(type, x, y) {
+      this.type = type;
+      this.def = POWERUP_DEFS[type];
+      this.w = 26;
+      this.h = 26;
+      this.x = x;
+      this.baseY = y;
+      this.y = y;
+      this.speed = 130;
+      this.t = rand(0, Math.PI * 2);
+      this.dead = false;
+    }
+    get hitbox() {
+      return { x: this.x, y: this.y, w: this.w, h: this.h };
+    }
+    update(dt) {
+      this.t += dt;
+      this.x -= this.speed * dt;
+      this.y = clamp(this.baseY + Math.sin(this.t * 2.5) * 14, 4, H - this.h - 4);
+      if (this.x < -this.w - 10) this.dead = true;
+    }
+    draw() {
+      const cx = this.x + this.w / 2;
+      const cy = this.y + this.h / 2;
+      const pulse = 1 + Math.sin(this.t * 4) * 0.06;
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.scale(pulse, pulse);
+      ctx.beginPath();
+      ctx.arc(0, 0, this.w / 2, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(8,12,26,0.8)';
+      ctx.fill();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = this.def.color;
+      ctx.shadowColor = this.def.color;
+      ctx.shadowBlur = 10;
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = this.def.color;
+
+      if (this.type === 'speed') {
+        ctx.beginPath();
+        ctx.moveTo(-2, -8);
+        ctx.lineTo(4, -1);
+        ctx.lineTo(0, -1);
+        ctx.lineTo(3, 8);
+        ctx.lineTo(-5, 0);
+        ctx.lineTo(-1, 0);
+        ctx.closePath();
+        ctx.fill();
+      } else if (this.type === 'life') {
+        ctx.fillRect(-2, -7, 4, 14);
+        ctx.fillRect(-7, -2, 14, 4);
+      } else if (this.type === 'diagonal') {
+        for (const a of [-0.5, 0, 0.5]) {
+          ctx.save();
+          ctx.rotate(a);
+          ctx.beginPath();
+          ctx.moveTo(-7, 0);
+          ctx.lineTo(6, -2.5);
+          ctx.lineTo(6, 2.5);
+          ctx.closePath();
+          ctx.fill();
+          ctx.restore();
+        }
+      }
+      ctx.restore();
+    }
+  }
+
+  class FloatingText {
+    constructor(x, y, text, color) {
+      this.x = x;
+      this.y = y;
+      this.text = text;
+      this.color = color;
+      this.life = 1.1;
+      this.maxLife = this.life;
+    }
+    update(dt) {
+      this.y -= 30 * dt;
+      this.life -= dt;
+      return this.life > 0;
+    }
+    draw() {
+      const alpha = clamp(this.life / this.maxLife, 0, 1);
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = this.color;
+      ctx.font = 'bold 15px Segoe UI, Arial, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(this.text, this.x, this.y);
+      ctx.globalAlpha = 1;
+      ctx.textAlign = 'left';
+    }
+  }
+
   // ---------- Game state containers ----------
-  let player, bullets, enemyBullets, enemies, particles, starfield;
+  const MAX_LIVES = 3;
+  let player, bullets, enemyBullets, enemies, particles, powerUps, floatingTexts, starfield;
   let score = 0;
-  let lives = 3;
+  let lives = MAX_LIVES;
   let spawnTimer = 0;
   let difficultyTimer = 0;
   let spawnInterval = 1.4;
+  let powerUpTimer = 0;
   let lastTime = 0;
 
   function resetGame() {
@@ -325,12 +463,15 @@
     enemyBullets = [];
     enemies = [];
     particles = [];
+    powerUps = [];
+    floatingTexts = [];
     starfield = new Starfield();
     score = 0;
-    lives = 3;
+    lives = MAX_LIVES;
     spawnTimer = 0;
     difficultyTimer = 0;
     spawnInterval = 1.4;
+    powerUpTimer = rand(6, 10);
     updateHud();
   }
 
@@ -351,6 +492,41 @@
 
   function spawnExplosion(x, y, color, count = 16) {
     for (let i = 0; i < count; i++) particles.push(new Particle(x, y, color));
+  }
+
+  function spawnPowerUp() {
+    const types = Object.keys(POWERUP_DEFS);
+    const type = types[Math.floor(Math.random() * types.length)];
+    const y = rand(24, H - 24 - 26);
+    powerUps.push(new PowerUp(type, W + 30, y));
+  }
+
+  function applyPowerUp(type) {
+    const color = POWERUP_DEFS[type].color;
+    if (type === 'speed') {
+      if (player.speedBoosts < MAX_SPEED_BOOSTS) {
+        player.speedBoosts += 1;
+        player.speed += SPEED_BOOST_AMOUNT;
+        return { applied: true, text: 'Vitesse +', color };
+      }
+      return { applied: false, text: 'Sans effet', color };
+    }
+    if (type === 'life') {
+      if (lives < MAX_LIVES) {
+        lives += 1;
+        updateHud();
+        return { applied: true, text: '+1 vie', color };
+      }
+      return { applied: false, text: 'Sans effet', color };
+    }
+    if (type === 'diagonal') {
+      if (!player.diagonalUnlocked) {
+        player.diagonalUnlocked = true;
+        return { applied: true, text: 'Tir diagonal !', color };
+      }
+      return { applied: false, text: 'Sans effet', color };
+    }
+    return { applied: false, text: '', color };
   }
 
   function togglePause() {
@@ -401,10 +577,18 @@
       spawnInterval = Math.max(0.5, spawnInterval - 0.12);
     }
 
+    powerUpTimer -= dt;
+    if (powerUpTimer <= 0) {
+      spawnPowerUp();
+      powerUpTimer = rand(9, 15);
+    }
+
     for (const b of bullets) b.update(dt);
     for (const b of enemyBullets) b.update(dt);
     for (const e of enemies) e.update(dt);
+    for (const p of powerUps) p.update(dt);
     particles = particles.filter((p) => p.update(dt));
+    floatingTexts = floatingTexts.filter((f) => f.update(dt));
 
     // player bullets vs enemies
     for (const b of bullets) {
@@ -446,9 +630,23 @@
       }
     }
 
+    // power-ups vs player
+    for (const p of powerUps) {
+      if (p.dead) continue;
+      if (rectsOverlap(player.hitbox, p.hitbox)) {
+        p.dead = true;
+        const result = applyPowerUp(p.type);
+        floatingTexts.push(new FloatingText(p.x + p.w / 2, p.y, result.text, result.color));
+        spawnExplosion(p.x + p.w / 2, p.y + p.h / 2, result.color, 10);
+        if (result.applied) sfx.pickup();
+        else sfx.pickupNone();
+      }
+    }
+
     bullets = bullets.filter((b) => !b.dead);
     enemyBullets = enemyBullets.filter((b) => !b.dead);
     enemies = enemies.filter((e) => !e.dead);
+    powerUps = powerUps.filter((p) => !p.dead);
   }
 
   function damagePlayer() {
@@ -475,8 +673,10 @@
     for (const b of bullets) b.draw();
     for (const b of enemyBullets) b.draw();
     for (const e of enemies) e.draw();
+    for (const p of powerUps) p.draw();
     player.draw();
     for (const p of particles) p.draw();
+    for (const f of floatingTexts) f.draw();
   }
 
   function loop(now) {
