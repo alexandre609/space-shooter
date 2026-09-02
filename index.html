@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nebula Runner</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="game-wrap">
+  <canvas id="game" width="960" height="540"></canvas>
+
+  <div id="hud">
+    <div id="score">Score : 0</div>
+    <div id="lives">Vies : ❤️❤️❤️</div>
+  </div>
+
+  <div id="start-screen" class="overlay">
+    <h1>NEBULA RUNNER</h1>
+    <p>Un shoot'em up en vue de côté</p>
+    <div class="controls">
+      <p><strong>Déplacement :</strong> Flèches ou ZQSD / WASD</p>
+      <p><strong>Tirer :</strong> Espace</p>
+      <p><strong>Pause :</strong> P</p>
+    </div>
+    <button id="start-btn">Démarrer</button>
+  </div>
+
+  <div id="pause-screen" class="overlay hidden">
+    <h1>PAUSE</h1>
+    <p>Appuyez sur P pour reprendre</p>
+  </div>
+
+  <div id="game-over-screen" class="overlay hidden">
+    <h1>GAME OVER</h1>
+    <p id="final-score">Score final : 0</p>
+    <p id="best-score">Meilleur score : 0</p>
+    <button id="restart-btn">Rejouer</button>
+  </div>
+</div>
+
+<script src="game.js"></script>
+</body>
+</html>

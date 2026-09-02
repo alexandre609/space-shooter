@@ -1,0 +1,113 @@
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: #05060f;
+  color: #e9f1ff;
+  font-family: "Segoe UI", "Trebuchet MS", Arial, sans-serif;
+  overflow: hidden;
+}
+
+#game-wrap {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+canvas#game {
+  background: #000212;
+  width: min(100vw, 177.78vh);
+  height: min(100vh, 56.25vw);
+  image-rendering: pixelated;
+  display: block;
+  box-shadow: 0 0 60px rgba(80, 140, 255, 0.15);
+}
+
+#hud {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(100vw, 177.78vh);
+  display: flex;
+  justify-content: space-between;
+  padding: 0 24px;
+  pointer-events: none;
+  font-size: 20px;
+  font-weight: bold;
+  text-shadow: 0 0 8px rgba(0, 0, 0, 0.9), 0 0 2px #000;
+  letter-spacing: 0.5px;
+}
+
+#lives {
+  font-size: 18px;
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  text-align: center;
+  background: rgba(2, 4, 16, 0.82);
+  backdrop-filter: blur(2px);
+}
+
+.overlay.hidden {
+  display: none;
+}
+
+.overlay h1 {
+  margin: 0;
+  font-size: 48px;
+  letter-spacing: 4px;
+  color: #7fd3ff;
+  text-shadow: 0 0 18px rgba(127, 211, 255, 0.7);
+}
+
+.overlay p {
+  margin: 2px 0;
+  color: #b8c6e6;
+}
+
+.controls {
+  margin: 14px 0;
+  padding: 12px 20px;
+  border: 1px solid rgba(127, 211, 255, 0.3);
+  border-radius: 8px;
+  background: rgba(20, 30, 60, 0.4);
+}
+
+button {
+  margin-top: 10px;
+  padding: 12px 32px;
+  font-size: 18px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  color: #001018;
+  background: linear-gradient(180deg, #7fe3ff, #34a5e0);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  box-shadow: 0 4px 0 #1d6e97, 0 0 20px rgba(127, 211, 255, 0.4);
+  transition: transform 0.08s ease;
+}
+
+button:hover {
+  filter: brightness(1.1);
+}
+
+button:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 #1d6e97, 0 0 20px rgba(127, 211, 255, 0.4);
+}
