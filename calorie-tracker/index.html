@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#16a34a">
+<meta name="description" content="Suivez vos calories consommées chaque jour, simplement.">
+<title>CalTrack — Suivi des calories</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-192.svg">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app">
+
+  <header class="topbar">
+    <button id="prevDay" class="icon-btn" aria-label="Jour précédent">‹</button>
+    <div class="date-display">
+      <span id="dateLabel">Aujourd'hui</span>
+      <span id="dateSub" class="date-sub"></span>
+    </div>
+    <button id="nextDay" class="icon-btn" aria-label="Jour suivant">›</button>
+  </header>
+
+  <main class="content">
+
+    <section class="summary-card">
+      <div class="ring-wrap">
+        <svg class="ring" viewBox="0 0 120 120">
+          <circle class="ring-bg" cx="60" cy="60" r="52"></circle>
+          <circle id="ringProgress" class="ring-progress" cx="60" cy="60" r="52"></circle>
+        </svg>
+        <div class="ring-center">
+          <span id="remainingValue" class="ring-value">0</span>
+          <span class="ring-label">kcal restantes</span>
+        </div>
+      </div>
+
+      <div class="summary-stats">
+        <div class="stat">
+          <span class="stat-value" id="goalValue">2000</span>
+          <span class="stat-name">Objectif</span>
+        </div>
+        <div class="stat">
+          <span class="stat-value" id="consumedValue">0</span>
+          <span class="stat-name">Consommées</span>
+        </div>
+        <div class="stat">
+          <span class="stat-value" id="overValue">0</span>
+          <span class="stat-name">Dépassement</span>
+        </div>
+      </div>
+
+      <button id="editGoalBtn" class="link-btn">Modifier l'objectif</button>
+    </section>
+
+    <section class="meals" id="mealsContainer">
+      <!-- meal groups injected here -->
+    </section>
+
+  </main>
+
+  <button id="addFab" class="fab" aria-label="Ajouter un aliment">+</button>
+
+  <nav class="tabbar">
+    <button class="tab-btn active" data-tab="today">Aujourd'hui</button>
+    <button class="tab-btn" data-tab="history">Historique</button>
+  </nav>
+</div>
+
+<!-- Add entry sheet -->
+<div id="entrySheetBackdrop" class="sheet-backdrop hidden">
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+    <div class="sheet-handle"></div>
+    <h2 id="sheetTitle">Ajouter un aliment</h2>
+    <form id="entryForm">
+      <label class="field">
+        <span>Nom de l'aliment</span>
+        <input type="text" id="foodName" placeholder="Ex : Pomme, Riz, Poulet..." required autocomplete="off">
+      </label>
+
+      <label class="field">
+        <span>Calories (kcal)</span>
+        <input type="number" id="foodCalories" placeholder="Ex : 150" min="0" step="1" inputmode="numeric" required>
+      </label>
+
+      <label class="field">
+        <span>Repas</span>
+        <select id="foodMeal">
+          <option value="breakfast">Petit-déjeuner</option>
+          <option value="lunch">Déjeuner</option>
+          <option value="dinner">Dîner</option>
+          <option value="snack">Collation</option>
+        </select>
+      </label>
+
+      <div class="sheet-actions">
+        <button type="button" id="cancelEntry" class="btn btn-secondary">Annuler</button>
+        <button type="submit" class="btn btn-primary">Ajouter</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Goal edit sheet -->
+<div id="goalSheetBackdrop" class="sheet-backdrop hidden">
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="goalSheetTitle">
+    <div class="sheet-handle"></div>
+    <h2 id="goalSheetTitle">Objectif calorique quotidien</h2>
+    <form id="goalForm">
+      <label class="field">
+        <span>Calories par jour (kcal)</span>
+        <input type="number" id="goalInput" min="0" step="1" inputmode="numeric" required>
+      </label>
+      <div class="sheet-actions">
+        <button type="button" id="cancelGoal" class="btn btn-secondary">Annuler</button>
+        <button type="submit" class="btn btn-primary">Enregistrer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- History view -->
+<div id="historyBackdrop" class="sheet-backdrop hidden">
+  <div class="sheet sheet-full" role="dialog" aria-modal="true" aria-labelledby="historyTitle">
+    <div class="sheet-handle"></div>
+    <h2 id="historyTitle">Historique</h2>
+    <div id="historyList" class="history-list"></div>
+    <div class="sheet-actions">
+      <button type="button" id="closeHistory" class="btn btn-secondary">Fermer</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast hidden"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
